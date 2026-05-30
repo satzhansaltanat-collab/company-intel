@@ -610,9 +610,9 @@ function setState(state, extra) {
 
 // ── Claude API ─────────────────────────────────────────────
 async function fetchCompanyData(query, apiKey) {
-  const prompt = `You are a financial data assistant. Return ONLY valid JSON — no markdown, no code fences, no explanation.
+  const prompt = `You are a financial data assistant. Use web search to find the LATEST and MOST ACCURATE information about this company before answering. Search for current CEO, recent financials, and latest news.
 
-For the company or ticker "${query}", return this exact JSON structure:
+For the company or ticker "${query}", return ONLY valid JSON — no markdown, no code fences, no explanation:
 {
   "name": "Full official company name",
   "ticker": "TICKER",
@@ -649,6 +649,7 @@ For the company or ticker "${query}", return this exact JSON structure:
 }
 
 Rules:
+- ALWAYS search the web first to verify the current CEO and management team
 - management: 3–5 people NOT including the CEO
 - news: exactly 3 recent significant items; sentiment must be "positive", "negative", or "neutral"
 - geography: 3–6 countries/regions; shares should roughly sum to 100
@@ -656,31 +657,48 @@ Rules:
 - Use most recent complete fiscal year (prefer FY2024 vs FY2023; fall back to FY2023 vs FY2022)
 - If company not found or not publicly traded: {"error": "Company not found or not publicly traded"}`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
+  const messages = [{ role: 'user', content: prompt }];
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true'
+  };
+  const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error ${res.status}`);
+  // Loop to handle web search tool use
+  for (let i = 0; i < 8; i++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8000, tools, messages })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API error ${res.status}`);
+    }
+
+    const json = await res.json();
+
+    if (json.stop_reason !== 'tool_use') {
+      const textBlock = json.content.find(b => b.type === 'text');
+      if (!textBlock) throw new Error('No text in response');
+      const text = textBlock.text.trim()
+        .replace(/^```[a-z]*\n?/i, '')
+        .replace(/\n?```$/i, '');
+      return JSON.parse(text);
+    }
+
+    // Handle tool_use — append assistant message and tool results
+    messages.push({ role: 'assistant', content: json.content });
+    const toolResults = json.content
+      .filter(b => b.type === 'tool_use')
+      .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: '' }));
+    messages.push({ role: 'user', content: toolResults });
   }
 
-  const json = await res.json();
-  const text = json.content[0].text.trim()
-    .replace(/^```[a-z]*\n?/i, '')
-    .replace(/\n?```$/i, '');
-  return JSON.parse(text);
+  throw new Error('Search took too long. Try again.');
 }
 
 // ── Helpers ────────────────────────────────────────────────
