@@ -657,7 +657,6 @@ Rules:
 - Use most recent complete fiscal year (prefer FY2024 vs FY2023; fall back to FY2023 vs FY2022)
 - If company not found or not publicly traded: {"error": "Company not found or not publicly traded"}`;
 
-  const messages = [{ role: 'user', content: prompt }];
   const headers = {
     'Content-Type': 'application/json',
     'x-api-key': apiKey,
@@ -667,53 +666,68 @@ Rules:
   };
   const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
 
-  const extractJson = (content) => {
-    const textBlock = content.find(b => b.type === 'text');
-    if (!textBlock) return null;
-    const text = textBlock.text.trim()
-      .replace(/^```[a-z]*\n?/i, '')
-      .replace(/\n?```$/i, '');
-    return JSON.parse(text);
-  };
-
-  // Loop to handle web search tool use (server-side tool, Anthropic executes searches)
-  for (let i = 0; i < 10; i++) {
+  const callAPI = async (msgs, useTools) => {
+    const body = { model: 'claude-sonnet-4-6', max_tokens: 8000, messages: msgs };
+    if (useTools) body.tools = tools;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 8000, tools, messages })
+      method: 'POST', headers, body: JSON.stringify(body)
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error?.message || `API error ${res.status}`);
     }
+    return res.json();
+  };
 
-    const json = await res.json();
+  // Step 1: search the web and gather facts as free text
+  const searchPrompt = `Search the web and find the most current and accurate information about "${query}" company:
+- Current CEO name and when they took the role
+- Latest annual financial results (revenue, net income, EBITDA, total assets)
+- Current market capitalization
+- Top 3-5 executives besides the CEO
+- 3 most recent significant news (last 6 months)
+- Main countries of operation
 
-    // If no more tool calls — extract JSON from text block
+Write a summary of everything you found. Be specific with names and numbers.`;
+
+  const searchMessages = [{ role: 'user', content: searchPrompt }];
+  let facts = '';
+
+  for (let i = 0; i < 10; i++) {
+    const json = await callAPI(searchMessages, true);
+    const textBlock = json.content.find(b => b.type === 'text');
+
     if (json.stop_reason === 'end_turn') {
-      return extractJson(json.content);
+      facts = textBlock?.text || '';
+      break;
     }
 
-    // Handle tool_use (web search) — append full assistant content and acknowledge
-    messages.push({ role: 'assistant', content: json.content });
-
+    searchMessages.push({ role: 'assistant', content: json.content });
     const toolUseBlocks = json.content.filter(b => b.type === 'tool_use');
-    if (toolUseBlocks.length === 0) {
-      return extractJson(json.content);
-    }
+    if (!toolUseBlocks.length) { facts = textBlock?.text || ''; break; }
 
-    // Send tool_results — Anthropic fills in actual search results server-side
     const toolResults = toolUseBlocks.map(b => ({
-      type: 'tool_result',
-      tool_use_id: b.id,
-      content: [{ type: 'text', text: 'Search executed.' }]
+      type: 'tool_result', tool_use_id: b.id,
+      content: [{ type: 'text', text: 'Search executed, results incorporated.' }]
     }));
-    messages.push({ role: 'user', content: toolResults });
+    searchMessages.push({ role: 'user', content: toolResults });
   }
 
-  throw new Error('Search took too long. Try again.');
+  // Step 2: convert gathered facts into strict JSON
+  const jsonPrompt = `Based on these researched facts about "${query}":
+
+${facts}
+
+Now output ONLY valid JSON with no explanation, no markdown, no code fences — just the raw JSON object:
+${prompt}`;
+
+  const jsonResp = await callAPI([{ role: 'user', content: jsonPrompt }], false);
+  const rawText = jsonResp.content.find(b => b.type === 'text')?.text?.trim() || '';
+
+  // Try to extract JSON even if Claude added some text around it
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Could not parse company data. Try again.');
+  return JSON.parse(jsonMatch[0]);
 }
 
 // ── Helpers ────────────────────────────────────────────────
