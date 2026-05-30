@@ -7,8 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -485,7 +484,7 @@
         <line x1="16" y1="17" x2="8" y2="17"/>
         <polyline points="10 9 9 9 8 9"/>
       </svg>
-      Download Word
+      Download PDF
     </button>
   </div>
 </div>
@@ -789,137 +788,26 @@ function renderResults(d) {
   `).join('');
 }
 
-// ── Word Export ────────────────────────────────────────────
-wordBtn.addEventListener('click', exportWord);
+// ── PDF Export ─────────────────────────────────────────────
+wordBtn.addEventListener('click', exportPDF);
 
-async function exportWord() {
+async function exportPDF() {
   if (!currentData || wordBtn.disabled) return;
   wordBtn.disabled = true;
   wordBtn.textContent = 'Generating…';
 
   try {
-    const d = currentData;
-    const f = d.financials;
-    const {
-      Document, Paragraph, TextRun, Table, TableRow, TableCell,
-      HeadingLevel, AlignmentType, WidthType, Packer, BorderStyle
-    } = docx;
-
-    const noBorder = {
-      top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-      right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-    };
-
-    const cell = (text, opts = {}) => new TableCell({
-      borders: noBorder,
-      children: [new Paragraph({
-        children: [new TextRun({ text: String(text), size: 20, ...opts })]
-      })]
-    });
-
-    const hCell = text => cell(text, { bold: true, color: '555555' });
-
-    const finRows = [
-      ['Revenue',      f.revenue],
-      ['Total Assets', f.total_assets],
-      ['EBITDA',       f.ebitda],
-      ['Net Income',   f.net_income],
-    ];
-
-    const children = [
-      new Paragraph({
-        children: [new TextRun({ text: `${d.emoji} ${d.name}`, bold: true, size: 52 })],
-        spacing: { after: 120 }
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: `${d.ticker} · ${d.exchange} · ${d.country}`, size: 26, color: '555555' })],
-        spacing: { after: 80 }
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: `${d.sector} · Est. ${d.founded} · ${Number(d.employees).toLocaleString()} employees`, size: 22, color: '888888' })],
-        spacing: { after: 320 }
-      }),
-
-      new Paragraph({ text: 'About', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      new Paragraph({ children: [new TextRun({ text: d.description, size: 22 })], spacing: { after: 320 } }),
-
-      new Paragraph({ text: 'Financials (USD)', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      new Paragraph({
-        children: [new TextRun({ text: `Market Cap: ${fmtMoney(f.market_cap.value)}  (as of ${f.market_cap.date})`, size: 24, bold: true })],
-        spacing: { after: 160 }
-      }),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({ children: [hCell('Metric'), hCell(String(f.current_year)), hCell(String(f.previous_year)), hCell('YoY')] }),
-          ...finRows.map(([label, v]) => new TableRow({
-            children: [
-              cell(label),
-              cell(fmtMoney(v.current)),
-              cell(fmtMoney(v.previous)),
-              cell(fmtChangePlain(v.current, v.previous))
-            ]
-          }))
-        ]
-      }),
-      new Paragraph({ text: '', spacing: { after: 240 } }),
-
-      new Paragraph({ text: 'Chief Executive Officer', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      new Paragraph({ children: [new TextRun({ text: `${d.ceo.name} · CEO since ${d.ceo.since}`, size: 22, bold: true })], spacing: { after: 80 } }),
-      new Paragraph({ children: [new TextRun({ text: d.ceo.bio, size: 22, color: '555555' })], spacing: { after: 300 } }),
-
-      new Paragraph({ text: 'Management Team', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({ children: [hCell('Name'), hCell('Title')] }),
-          ...d.management.map(m => new TableRow({ children: [cell(m.name), cell(m.title)] }))
-        ]
-      }),
-      new Paragraph({ text: '', spacing: { after: 240 } }),
-
-      new Paragraph({ text: 'Latest News', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      ...d.news.map(n => {
-        const icon = n.sentiment === 'positive' ? '▲' : n.sentiment === 'negative' ? '▼' : '●';
-        return new Paragraph({
-          children: [
-            new TextRun({ text: `${icon} `, size: 22 }),
-            new TextRun({ text: n.headline, bold: true, size: 22 }),
-            new TextRun({ text: `  —  ${n.source}, ${n.date}`, size: 20, color: '888888' }),
-          ],
-          spacing: { after: 100 }
-        });
-      }),
-      new Paragraph({ text: '', spacing: { after: 160 } }),
-
-      new Paragraph({ text: 'Geographic Presence', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({ children: [hCell('Country'), hCell('Type'), hCell('Share')] }),
-          ...d.geography.map(g => new TableRow({
-            children: [cell(`${g.flag} ${g.country}`), cell(g.type), cell(`${g.share}%`)]
-          }))
-        ]
-      }),
-      new Paragraph({ text: '', spacing: { after: 300 } }),
-
-      new Paragraph({
-        children: [new TextRun({
-          text: `Generated by Company Intel · ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
-          size: 18, color: 'aaaaaa', italics: true
-        })],
-        alignment: AlignmentType.CENTER
-      })
-    ];
-
-    const doc = new Document({ sections: [{ children }] });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${d.ticker}_intel.docx`);
+    const element = document.getElementById('results');
+    await html2pdf().set({
+      margin: [10, 10, 10, 10],
+      filename: `${currentData.ticker}_intel.pdf`,
+      image: { type: 'jpeg', quality: 0.97 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(element).save();
   } catch (err) {
-    alert('Word export failed: ' + err.message);
+    alert('PDF export failed: ' + err.message);
   } finally {
     wordBtn.disabled = false;
     wordBtn.innerHTML = `
@@ -930,7 +818,7 @@ async function exportWord() {
         <line x1="16" y1="17" x2="8" y2="17"/>
         <polyline points="10 9 9 9 8 9"/>
       </svg>
-      Download Word`;
+      Download PDF`;
   }
 }
 
