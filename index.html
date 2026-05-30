@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Company Intel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #f6f8fa;
+      --surface2: #edf2f7;
+      --border: #e2e8f0;
+      --text: #0d1117;
+      --muted: #6e7681;
+      --accent: #0969da;
+      --accent-bg: #dbeafe;
+      --green: #1a7f37;
+      --green-bg: #d1fae5;
+      --red: #cf222e;
+      --red-bg: #fee2e2;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #21262d;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --accent-bg: #1c2d3d;
+        --green: #3fb950;
+        --green-bg: #1a3a1f;
+        --red: #f85149;
+        --red-bg: #3a1a1a;
+      }
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 16px 128px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 8px;
+    }
+
+    .logo { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .logo span { color: var(--accent); }
+
+    .btn-icon {
+      width: 40px; height: 40px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-icon:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Search ── */
+    .search-section { padding: 12px 0 24px; }
+
+    .search-wrap { display: flex; gap: 10px; margin-bottom: 14px; }
+
+    .search-input {
+      flex: 1; height: 48px;
+      padding: 0 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--accent); background: var(--bg); }
+
+    .btn-search {
+      height: 48px; padding: 0 22px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 500;
+      cursor: pointer; white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn-search:hover { opacity: 0.88; }
+    .btn-search:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chip {
+      height: 32px; padding: 0 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 100px;
+      background: transparent; color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+    /* ── States ── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 0;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state h2 { font-size: 17px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; }
+
+    .loading { display: none; text-align: center; padding: 64px 0; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: var(--muted); }
+    .loading-query { font-weight: 600; color: var(--text); }
+
+    .error-box {
+      display: none;
+      background: var(--red-bg);
+      border: 1.5px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      color: var(--red);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Cards ── */
+    .results { display: none; }
+
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 12px;
+    }
+
+    .card-label {
+      font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 16px;
+    }
+
+    /* Company Header */
+    .company-emoji { font-size: 42px; display: block; margin-bottom: 12px; }
+    .company-name { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin-bottom: 10px; }
+
+    .company-meta-row {
+      display: flex; flex-wrap: wrap;
+      align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ticker-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; font-weight: 500;
+      background: var(--accent-bg); color: var(--accent);
+      padding: 3px 8px; border-radius: 6px;
+    }
+
+    .exchange-badge {
+      font-size: 12px; font-weight: 500;
+      background: var(--surface2); color: var(--muted);
+      padding: 3px 8px; border-radius: 6px;
+    }
+
+    .company-details {
+      font-size: 13px; color: var(--muted);
+      display: flex; flex-wrap: wrap;
+      gap: 6px 18px;
+    }
+
+    /* Financials */
+    .market-cap-block { margin-bottom: 20px; }
+    .market-cap-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .market-cap-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px; font-weight: 500; letter-spacing: -0.5px;
+    }
+    .market-cap-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .fin-table { width: 100%; border-collapse: collapse; }
+    .fin-table th {
+      font-size: 11px; font-weight: 500; color: var(--muted);
+      text-align: right; padding: 0 0 10px;
+    }
+    .fin-table th:first-child { text-align: left; }
+    .fin-table td {
+      font-size: 13px; padding: 10px 0;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .fin-table td:first-child { color: var(--muted); }
+    .fin-table td:not(:first-child) {
+      text-align: right;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+    }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+
+    /* CEO */
+    .ceo-row { display: flex; align-items: flex-start; gap: 14px; }
+    .avatar {
+      width: 48px; height: 48px; min-width: 48px;
+      border-radius: 50%;
+      background: var(--accent-bg); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 600;
+    }
+    .ceo-info h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+    .ceo-since { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .ceo-bio { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+    /* Management */
+    .mgmt-list { display: flex; flex-direction: column; gap: 14px; }
+    .mgmt-item { display: flex; align-items: center; gap: 12px; }
+    .avatar-sm {
+      width: 36px; height: 36px; min-width: 36px;
+      border-radius: 50%;
+      background: var(--surface2); color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
+    .mgmt-name { font-size: 14px; font-weight: 500; }
+    .mgmt-title { font-size: 12px; color: var(--muted); }
+
+    /* News */
+    .news-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .news-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .news-item:first-child { padding-top: 0; }
+    .news-header {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 12px; margin-bottom: 5px;
+    }
+    .news-headline { font-size: 14px; font-weight: 500; line-height: 1.4; }
+    .sentiment { font-size: 15px; flex-shrink: 0; }
+    .sentiment.pos { color: var(--green); }
+    .sentiment.neg { color: var(--red); }
+    .sentiment.neu { color: var(--muted); }
+    .news-meta { font-size: 12px; color: var(--muted); }
+
+    /* Geography */
+    .geo-list { display: flex; flex-direction: column; gap: 14px; }
+    .geo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .geo-left { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .geo-type {
+      font-size: 11px; color: var(--muted);
+      background: var(--surface2);
+      padding: 2px 6px; border-radius: 4px;
+    }
+    .geo-share { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
+
+    /* ── Bottom bar ── */
+    .bottom-bar {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 12px 16px 20px;
+      background: var(--bg);
+      border-top: 1.5px solid var(--border);
+      z-index: 100;
+    }
+    .bottom-bar-inner { max-width: 480px; margin: 0 auto; }
+    .btn-word {
+      width: 100%; height: 52px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.15s;
+    }
+    .btn-word:hover { opacity: 0.88; }
+    .btn-word:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      width: 100%; max-width: 480px;
+      background: var(--bg);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 8px 20px 40px;
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 20px;
+    }
+    .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .modal-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+    .modal input[type="password"], .modal input[type="text"] {
+      width: 100%; height: 48px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; outline: none;
+      margin-bottom: 16px;
+    }
+    .modal input:focus { border-color: var(--accent); }
+    .btn-save {
+      width: 100%; height: 48px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-save:hover { opacity: 0.88; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="header">
+    <div class="logo">Company <span>Intel</span></div>
+    <button class="btn-icon" id="settingsBtn" title="API Key">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </header>
+
+  <section class="search-section">
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" type="text"
+        placeholder="Apple, TSLA, HSBC, Aramco…"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn-search" id="searchBtn">Search</button>
+    </div>
+    <div class="chips">
+      <button class="chip" data-q="Apple">🍎 Apple</button>
+      <button class="chip" data-q="Tesla">⚡ Tesla</button>
+      <button class="chip" data-q="HSBC">🏦 HSBC</button>
+      <button class="chip" data-q="Saudi Aramco">🛢️ Aramco</button>
+      <button class="chip" data-q="Alibaba">🛒 Alibaba</button>
+      <button class="chip" data-q="Volkswagen">🚗 VW</button>
+    </div>
+  </section>
+
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🔍</div>
+    <h2>Search any public company</h2>
+    <p>Enter a company name or ticker symbol<br>to get a full intelligence dossier in seconds</p>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Analyzing data for <span class="loading-query" id="loadingQuery"></span>…</div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results" id="results">
+
+    <div class="card" id="cardHeader">
+      <span class="company-emoji" id="companyEmoji"></span>
+      <div class="company-name" id="companyName"></div>
+      <div class="company-meta-row">
+        <span class="ticker-badge" id="companyTicker"></span>
+        <span class="exchange-badge" id="companyExchange"></span>
+      </div>
+      <div class="company-details" id="companyDetails"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">About</div>
+      <div id="companyDescription" style="font-size:14px;line-height:1.65;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Financials (USD)</div>
+      <div class="market-cap-block">
+        <div class="market-cap-label">Market Capitalization</div>
+        <div class="market-cap-value" id="marketCap"></div>
+        <div class="market-cap-date" id="marketCapDate"></div>
+      </div>
+      <table class="fin-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th id="finYear1"></th>
+            <th id="finYear2"></th>
+            <th>YoY</th>
+          </tr>
+        </thead>
+        <tbody id="finBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Chief Executive Officer</div>
+      <div class="ceo-row">
+        <div class="avatar" id="ceoAvatar"></div>
+        <div class="ceo-info">
+          <h3 id="ceoName"></h3>
+          <div class="ceo-since" id="ceoSince"></div>
+          <div class="ceo-bio" id="ceoBio"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Management Team</div>
+      <div class="mgmt-list" id="mgmtList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Latest News</div>
+      <div id="newsList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Geographic Presence</div>
+      <div class="geo-list" id="geoList"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar" id="bottomBar">
+  <div class="bottom-bar-inner">
+    <button class="btn-word" id="wordBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Download Word
+    </button>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>API Key</h2>
+    <p class="modal-desc">Your Anthropic API key is stored only in your browser (localStorage) and sent exclusively to the Anthropic API — never anywhere else.</p>
+    <label for="apiKeyInput">Anthropic API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off">
+    <button class="btn-save" id="saveKeyBtn">Save &amp; Close</button>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let currentData = null;
+
+// ── Elements ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const searchInput = $('searchInput');
+const searchBtn   = $('searchBtn');
+const emptyState  = $('emptyState');
+const loadingEl   = $('loading');
+const loadingQuery = $('loadingQuery');
+const errorBox    = $('errorBox');
+const resultsEl   = $('results');
+const bottomBar   = $('bottomBar');
+const settingsBtn = $('settingsBtn');
+const modalOverlay = $('modalOverlay');
+const apiKeyInput = $('apiKeyInput');
+const saveKeyBtn  = $('saveKeyBtn');
+const wordBtn     = $('wordBtn');
+
+// ── API Key ────────────────────────────────────────────────
+const getKey = () => localStorage.getItem('ci_api_key') || '';
+const saveKey = k => localStorage.setItem('ci_api_key', k.trim());
+
+settingsBtn.addEventListener('click', () => {
+  apiKeyInput.value = getKey();
+  modalOverlay.classList.add('open');
+});
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+});
+saveKeyBtn.addEventListener('click', () => {
+  saveKey(apiKeyInput.value);
+  modalOverlay.classList.remove('open');
+});
+
+// ── Chips ──────────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    searchInput.value = chip.dataset.q;
+    doSearch();
+  });
+});
+
+// ── Search ─────────────────────────────────────────────────
+searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+searchBtn.addEventListener('click', doSearch);
+
+async function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) return;
+
+  const key = getKey();
+  if (!key) {
+    modalOverlay.classList.add('open');
+    return;
+  }
+
+  setState('loading', q);
+
+  try {
+    const data = await fetchCompanyData(q, key);
+    if (data.error) throw new Error(data.error);
+    currentData = data;
+    renderResults(data);
+    setState('results');
+  } catch (err) {
+    setState('error', err.message || 'Failed to fetch data. Check your API key and try again.');
+  }
+}
+
+function setState(state, extra) {
+  emptyState.style.display  = 'none';
+  loadingEl.style.display   = 'none';
+  errorBox.style.display    = 'none';
+  resultsEl.style.display   = 'none';
+  bottomBar.style.display   = 'none';
+  searchBtn.disabled        = false;
+
+  if (state === 'loading') {
+    loadingEl.style.display  = 'block';
+    loadingQuery.textContent = extra;
+    searchBtn.disabled       = true;
+  } else if (state === 'results') {
+    resultsEl.style.display  = 'block';
+    bottomBar.style.display  = 'block';
+  } else if (state === 'error') {
+    errorBox.style.display   = 'block';
+    errorBox.textContent     = '⚠️ ' + extra;
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'block';
+  }
+}
+
+// ── Claude API ─────────────────────────────────────────────
+async function fetchCompanyData(query, apiKey) {
+  const prompt = `You are a financial data assistant. Return ONLY valid JSON — no markdown, no code fences, no explanation.
+
+For the company or ticker "${query}", return this exact JSON structure:
+{
+  "name": "Full official company name",
+  "ticker": "TICKER",
+  "exchange": "NASDAQ/NYSE/LSE/TSX/ASX/Euronext/MOEX/HKEx/etc",
+  "sector": "Sector name",
+  "country": "Headquarters country",
+  "founded": 1976,
+  "employees": 164000,
+  "emoji": "One relevant emoji",
+  "description": "2-3 sentences: what the company does, main products/markets, competitive position.",
+  "financials": {
+    "market_cap": { "value": 3000000000000, "date": "May 2025" },
+    "current_year": 2024,
+    "previous_year": 2023,
+    "revenue":      { "current": 391000000000, "previous": 383000000000 },
+    "total_assets": { "current": 352000000000, "previous": 353000000000 },
+    "ebitda":       { "current": 130000000000, "previous": 125000000000 },
+    "net_income":   { "current":  93736000000, "previous":  96995000000 }
+  },
+  "ceo": {
+    "name": "Full Name",
+    "since": 2011,
+    "bio": "2-3 sentences: career path and key achievements."
+  },
+  "management": [
+    { "name": "Full Name", "title": "Official Title" }
+  ],
+  "news": [
+    { "headline": "Brief news headline", "source": "Publication Name", "date": "Month YYYY", "sentiment": "positive" }
+  ],
+  "geography": [
+    { "country": "United States", "flag": "🇺🇸", "type": "HQ", "share": 45 }
+  ]
+}
+
+Rules:
+- management: 3–5 people NOT including the CEO
+- news: exactly 3 recent significant items; sentiment must be "positive", "negative", or "neutral"
+- geography: 3–6 countries/regions; shares should roughly sum to 100
+- All financial values in USD (convert if needed)
+- Use most recent complete fiscal year (prefer FY2024 vs FY2023; fall back to FY2023 vs FY2022)
+- If company not found or not publicly traded: {"error": "Company not found or not publicly traded"}`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+
+  const json = await res.json();
+  const text = json.content[0].text.trim()
+    .replace(/^```[a-z]*\n?/i, '')
+    .replace(/\n?```$/i, '');
+  return JSON.parse(text);
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function fmtMoney(n) {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9)  return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6)  return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${n.toLocaleString()}`;
+}
+
+function fmtChange(cur, prev) {
+  const pct = ((cur - prev) / Math.abs(prev)) * 100;
+  const up  = pct >= 0;
+  return `<span class="${up ? 'pos' : 'neg'}">${up ? '▲' : '▼'}${Math.abs(pct).toFixed(1)}%</span>`;
+}
+
+function fmtChangePlain(cur, prev) {
+  const pct = ((cur - prev) / Math.abs(prev)) * 100;
+  return `${pct >= 0 ? '▲' : '▼'}${Math.abs(pct).toFixed(1)}%`;
+}
+
+function initials(name) {
+  return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+function sentimentMark(s) {
+  if (s === 'positive') return { icon: '▲', cls: 'pos' };
+  if (s === 'negative') return { icon: '▼', cls: 'neg' };
+  return { icon: '●', cls: 'neu' };
+}
+
+// ── Render ─────────────────────────────────────────────────
+function renderResults(d) {
+  // Header
+  $('companyEmoji').textContent = d.emoji;
+  $('companyName').textContent  = d.name;
+  $('companyTicker').textContent   = d.ticker;
+  $('companyExchange').textContent = d.exchange;
+  $('companyDetails').innerHTML = `
+    <span>🌍 ${d.country}</span>
+    <span>🏭 ${d.sector}</span>
+    <span>📅 Est. ${d.founded}</span>
+    <span>👥 ${Number(d.employees).toLocaleString()} employees</span>
+  `;
+
+  // Description
+  $('companyDescription').textContent = d.description;
+
+  // Financials
+  $('marketCap').textContent    = fmtMoney(d.financials.market_cap.value);
+  $('marketCapDate').textContent = `As of ${d.financials.market_cap.date}`;
+  $('finYear1').textContent = d.financials.current_year;
+  $('finYear2').textContent = d.financials.previous_year;
+
+  const f = d.financials;
+  const rows = [
+    ['Revenue',      f.revenue],
+    ['Total Assets', f.total_assets],
+    ['EBITDA',       f.ebitda],
+    ['Net Income',   f.net_income],
+  ];
+  $('finBody').innerHTML = rows.map(([label, v]) => `
+    <tr>
+      <td>${label}</td>
+      <td>${fmtMoney(v.current)}</td>
+      <td>${fmtMoney(v.previous)}</td>
+      <td>${fmtChange(v.current, v.previous)}</td>
+    </tr>
+  `).join('');
+
+  // CEO
+  $('ceoAvatar').textContent = initials(d.ceo.name);
+  $('ceoName').textContent   = d.ceo.name;
+  $('ceoSince').textContent  = `CEO since ${d.ceo.since}`;
+  $('ceoBio').textContent    = d.ceo.bio;
+
+  // Management
+  $('mgmtList').innerHTML = d.management.map(m => `
+    <div class="mgmt-item">
+      <div class="avatar-sm">${initials(m.name)}</div>
+      <div>
+        <div class="mgmt-name">${m.name}</div>
+        <div class="mgmt-title">${m.title}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // News
+  $('newsList').innerHTML = d.news.map(n => {
+    const s = sentimentMark(n.sentiment);
+    return `
+      <div class="news-item">
+        <div class="news-header">
+          <div class="news-headline">${n.headline}</div>
+          <span class="sentiment ${s.cls}">${s.icon}</span>
+        </div>
+        <div class="news-meta">${n.source} · ${n.date}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Geography
+  $('geoList').innerHTML = d.geography.map(g => `
+    <div class="geo-item">
+      <div class="geo-header">
+        <div class="geo-left">
+          <span>${g.flag}</span>
+          <span>${g.country}</span>
+          <span class="geo-type">${g.type}</span>
+        </div>
+        <span class="geo-share">${g.share}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${Math.min(g.share, 100)}%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Word Export ────────────────────────────────────────────
+wordBtn.addEventListener('click', exportWord);
+
+async function exportWord() {
+  if (!currentData || wordBtn.disabled) return;
+  wordBtn.disabled = true;
+  wordBtn.textContent = 'Generating…';
+
+  try {
+    const d = currentData;
+    const f = d.financials;
+    const {
+      Document, Paragraph, TextRun, Table, TableRow, TableCell,
+      HeadingLevel, AlignmentType, WidthType, Packer, BorderStyle
+    } = docx;
+
+    const noBorder = {
+      top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      left:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+      right:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+    };
+
+    const cell = (text, opts = {}) => new TableCell({
+      borders: noBorder,
+      children: [new Paragraph({
+        children: [new TextRun({ text: String(text), size: 20, ...opts })]
+      })]
+    });
+
+    const hCell = text => cell(text, { bold: true, color: '555555' });
+
+    const finRows = [
+      ['Revenue',      f.revenue],
+      ['Total Assets', f.total_assets],
+      ['EBITDA',       f.ebitda],
+      ['Net Income',   f.net_income],
+    ];
+
+    const children = [
+      new Paragraph({
+        children: [new TextRun({ text: `${d.emoji} ${d.name}`, bold: true, size: 52 })],
+        spacing: { after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `${d.ticker} · ${d.exchange} · ${d.country}`, size: 26, color: '555555' })],
+        spacing: { after: 80 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `${d.sector} · Est. ${d.founded} · ${Number(d.employees).toLocaleString()} employees`, size: 22, color: '888888' })],
+        spacing: { after: 320 }
+      }),
+
+      new Paragraph({ text: 'About', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      new Paragraph({ children: [new TextRun({ text: d.description, size: 22 })], spacing: { after: 320 } }),
+
+      new Paragraph({ text: 'Financials (USD)', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      new Paragraph({
+        children: [new TextRun({ text: `Market Cap: ${fmtMoney(f.market_cap.value)}  (as of ${f.market_cap.date})`, size: 24, bold: true })],
+        spacing: { after: 160 }
+      }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ children: [hCell('Metric'), hCell(String(f.current_year)), hCell(String(f.previous_year)), hCell('YoY')] }),
+          ...finRows.map(([label, v]) => new TableRow({
+            children: [
+              cell(label),
+              cell(fmtMoney(v.current)),
+              cell(fmtMoney(v.previous)),
+              cell(fmtChangePlain(v.current, v.previous))
+            ]
+          }))
+        ]
+      }),
+      new Paragraph({ text: '', spacing: { after: 240 } }),
+
+      new Paragraph({ text: 'Chief Executive Officer', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      new Paragraph({ children: [new TextRun({ text: `${d.ceo.name} · CEO since ${d.ceo.since}`, size: 22, bold: true })], spacing: { after: 80 } }),
+      new Paragraph({ children: [new TextRun({ text: d.ceo.bio, size: 22, color: '555555' })], spacing: { after: 300 } }),
+
+      new Paragraph({ text: 'Management Team', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ children: [hCell('Name'), hCell('Title')] }),
+          ...d.management.map(m => new TableRow({ children: [cell(m.name), cell(m.title)] }))
+        ]
+      }),
+      new Paragraph({ text: '', spacing: { after: 240 } }),
+
+      new Paragraph({ text: 'Latest News', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      ...d.news.map(n => {
+        const icon = n.sentiment === 'positive' ? '▲' : n.sentiment === 'negative' ? '▼' : '●';
+        return new Paragraph({
+          children: [
+            new TextRun({ text: `${icon} `, size: 22 }),
+            new TextRun({ text: n.headline, bold: true, size: 22 }),
+            new TextRun({ text: `  —  ${n.source}, ${n.date}`, size: 20, color: '888888' }),
+          ],
+          spacing: { after: 100 }
+        });
+      }),
+      new Paragraph({ text: '', spacing: { after: 160 } }),
+
+      new Paragraph({ text: 'Geographic Presence', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+          new TableRow({ children: [hCell('Country'), hCell('Type'), hCell('Share')] }),
+          ...d.geography.map(g => new TableRow({
+            children: [cell(`${g.flag} ${g.country}`), cell(g.type), cell(`${g.share}%`)]
+          }))
+        ]
+      }),
+      new Paragraph({ text: '', spacing: { after: 300 } }),
+
+      new Paragraph({
+        children: [new TextRun({
+          text: `Generated by Company Intel · ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+          size: 18, color: 'aaaaaa', italics: true
+        })],
+        alignment: AlignmentType.CENTER
+      })
+    ];
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${d.ticker}_intel.docx`);
+  } catch (err) {
+    alert('Word export failed: ' + err.message);
+  } finally {
+    wordBtn.disabled = false;
+    wordBtn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Download Word`;
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────
+if (!getKey()) {
+  setTimeout(() => modalOverlay.classList.add('open'), 400);
+}
+</script>
+</body>
+</html>
