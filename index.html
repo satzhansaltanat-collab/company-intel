@@ -840,7 +840,13 @@ function buildPDFHtml(d) {
       <!-- Financials -->
       ${sectionTitle('Financials (USD)')}
       <p style="font-size:13px;margin:0 0 12px"><strong>Market Cap: ${fmtMoney(f.market_cap.value)}</strong> &nbsp;·&nbsp; <span style="color:#888">as of ${f.market_cap.date}</span></p>
-      <table style="${tableStyle}">
+      <table style="${tableStyle};table-layout:fixed">
+        <colgroup>
+          <col style="width:34%">
+          <col style="width:22%">
+          <col style="width:22%">
+          <col style="width:22%">
+        </colgroup>
         <thead><tr>
           <th style="${thStyle}">Metric</th>
           <th style="${thStyle};text-align:right">${f.current_year}</th>
@@ -867,7 +873,8 @@ function buildPDFHtml(d) {
 
       <!-- Management -->
       ${sectionTitle('Management Team')}
-      <table style="${tableStyle}">
+      <table style="${tableStyle};table-layout:fixed">
+        <colgroup><col style="width:45%"><col style="width:55%"></colgroup>
         <thead><tr>
           <th style="${thStyle}">Name</th>
           <th style="${thStyle}">Title</th>
@@ -894,7 +901,8 @@ function buildPDFHtml(d) {
 
       <!-- Geography -->
       ${sectionTitle('Geographic Presence')}
-      <table style="${tableStyle}">
+      <table style="${tableStyle};table-layout:fixed">
+        <colgroup><col style="width:50%"><col style="width:30%"><col style="width:20%"></colgroup>
         <thead><tr>
           <th style="${thStyle}">Country</th>
           <th style="${thStyle}">Type</th>
