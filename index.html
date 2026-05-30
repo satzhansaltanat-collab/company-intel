@@ -791,21 +791,148 @@ function renderResults(d) {
 // ── PDF Export ─────────────────────────────────────────────
 wordBtn.addEventListener('click', exportPDF);
 
+function buildPDFHtml(d) {
+  const f = d.financials;
+  const pct = (cur, prev) => {
+    const p = ((cur - prev) / Math.abs(prev)) * 100;
+    const color = p >= 0 ? '#1a7f37' : '#cf222e';
+    return `<span style="color:${color};font-weight:600">${p >= 0 ? '▲' : '▼'} ${Math.abs(p).toFixed(1)}%</span>`;
+  };
+  const sent = s => s === 'positive' ? '<span style="color:#1a7f37">▲</span>' : s === 'negative' ? '<span style="color:#cf222e">▼</span>' : '<span style="color:#888">●</span>';
+
+  const sectionTitle = t => `<h2 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin:28px 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:8px">${t}</h2>`;
+
+  const tableStyle = `width:100%;border-collapse:collapse;font-size:13px`;
+  const thStyle = `text-align:left;padding:7px 10px;background:#f6f8fa;color:#555;font-weight:600;font-size:12px;border:1px solid #e2e8f0`;
+  const tdStyle = `padding:7px 10px;border:1px solid #e2e8f0;color:#0d1117;vertical-align:top`;
+  const tdNumStyle = `${tdStyle};font-family:monospace;text-align:right`;
+
+  const finRows = [
+    ['Revenue',      f.revenue],
+    ['Total Assets', f.total_assets],
+    ['EBITDA',       f.ebitda],
+    ['Net Income',   f.net_income],
+  ];
+
+  return `
+    <div style="font-family:'DM Sans',Arial,sans-serif;color:#0d1117;max-width:700px;margin:0 auto;padding:20px">
+
+      <!-- Header -->
+      <div style="margin-bottom:24px">
+        <div style="font-size:36px;margin-bottom:8px">${d.emoji}</div>
+        <h1 style="font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:-.5px">${d.name}</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <span style="background:#dbeafe;color:#0969da;padding:3px 10px;border-radius:5px;font-family:monospace;font-size:13px;font-weight:600">${d.ticker}</span>
+          <span style="background:#f0f0f0;color:#555;padding:3px 10px;border-radius:5px;font-size:12px">${d.exchange}</span>
+        </div>
+        <div style="font-size:13px;color:#555;display:flex;gap:16px;flex-wrap:wrap">
+          <span>🌍 ${d.country}</span>
+          <span>🏭 ${d.sector}</span>
+          <span>📅 Est. ${d.founded}</span>
+          <span>👥 ${Number(d.employees).toLocaleString()} employees</span>
+        </div>
+      </div>
+
+      <!-- About -->
+      ${sectionTitle('About')}
+      <p style="font-size:14px;line-height:1.7;color:#333;margin:0">${d.description}</p>
+
+      <!-- Financials -->
+      ${sectionTitle('Financials (USD)')}
+      <p style="font-size:13px;margin:0 0 12px"><strong>Market Cap: ${fmtMoney(f.market_cap.value)}</strong> &nbsp;·&nbsp; <span style="color:#888">as of ${f.market_cap.date}</span></p>
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Metric</th>
+          <th style="${thStyle};text-align:right">${f.current_year}</th>
+          <th style="${thStyle};text-align:right">${f.previous_year}</th>
+          <th style="${thStyle};text-align:right">YoY</th>
+        </tr></thead>
+        <tbody>
+          ${finRows.map(([label, v]) => `<tr>
+            <td style="${tdStyle}">${label}</td>
+            <td style="${tdNumStyle}">${fmtMoney(v.current)}</td>
+            <td style="${tdNumStyle}">${fmtMoney(v.previous)}</td>
+            <td style="${tdNumStyle}">${pct(v.current, v.previous)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <!-- CEO -->
+      ${sectionTitle('Chief Executive Officer')}
+      <div style="background:#f6f8fa;border-radius:10px;padding:16px">
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">${d.ceo.name}</div>
+        <div style="font-size:12px;color:#888;margin-bottom:8px">CEO since ${d.ceo.since}</div>
+        <div style="font-size:13px;color:#444;line-height:1.6">${d.ceo.bio}</div>
+      </div>
+
+      <!-- Management -->
+      ${sectionTitle('Management Team')}
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Name</th>
+          <th style="${thStyle}">Title</th>
+        </tr></thead>
+        <tbody>
+          ${d.management.map(m => `<tr>
+            <td style="${tdStyle};font-weight:500">${m.name}</td>
+            <td style="${tdStyle};color:#555">${m.title}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <!-- News -->
+      ${sectionTitle('Latest News')}
+      ${d.news.map(n => `
+        <div style="padding:12px 0;border-bottom:1px solid #e2e8f0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="font-size:14px;font-weight:500;line-height:1.4;flex:1">${n.headline}</div>
+            <div>${sent(n.sentiment)}</div>
+          </div>
+          <div style="font-size:12px;color:#888;margin-top:4px">${n.source} · ${n.date}</div>
+        </div>
+      `).join('')}
+
+      <!-- Geography -->
+      ${sectionTitle('Geographic Presence')}
+      <table style="${tableStyle}">
+        <thead><tr>
+          <th style="${thStyle}">Country</th>
+          <th style="${thStyle}">Type</th>
+          <th style="${thStyle};text-align:right">Share</th>
+        </tr></thead>
+        <tbody>
+          ${d.geography.map(g => `<tr>
+            <td style="${tdStyle}">${g.flag} ${g.country}</td>
+            <td style="${tdStyle};color:#555">${g.type}</td>
+            <td style="${tdNumStyle};font-weight:600">${g.share}%</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <!-- Footer -->
+      <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#aaa">
+        Generated by Company Intel · ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+      </div>
+    </div>`;
+}
+
 async function exportPDF() {
   if (!currentData || wordBtn.disabled) return;
   wordBtn.disabled = true;
   wordBtn.textContent = 'Generating…';
 
   try {
-    const element = document.getElementById('results');
+    const d = currentData;
+    const container = document.createElement('div');
+    container.innerHTML = buildPDFHtml(d);
     await html2pdf().set({
-      margin: [10, 10, 10, 10],
-      filename: `${currentData.ticker}_intel.pdf`,
-      image: { type: 'jpeg', quality: 0.97 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      margin: [8, 8, 8, 8],
+      filename: `${d.ticker}_intel.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    }).from(element).save();
+      pagebreak: { mode: 'avoid-all' }
+    }).from(container).save();
   } catch (err) {
     alert('PDF export failed: ' + err.message);
   } finally {
