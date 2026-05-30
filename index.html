@@ -138,6 +138,17 @@
     .empty-state h2 { font-size: 17px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
     .empty-state p { font-size: 14px; }
 
+    .btn-demo {
+      margin-top: 20px;
+      height: 44px; padding: 0 22px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 100px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-demo:hover { opacity: 0.85; }
+
     .loading { display: none; text-align: center; padding: 64px 0; }
     .spinner {
       width: 36px; height: 36px;
@@ -397,6 +408,7 @@
     <div class="empty-icon">🔍</div>
     <h2>Search any public company</h2>
     <p>Enter a company name or ticker symbol<br>to get a full intelligence dossier in seconds</p>
+    <button class="btn-demo" id="demoBtn">▶ Try Demo — Apple Inc.</button>
   </div>
 
   <div class="loading" id="loading">
@@ -956,6 +968,50 @@ async function exportPDF() {
       Download PDF`;
   }
 }
+
+// ── Demo ───────────────────────────────────────────────────
+const DEMO_DATA = {
+  name: "Apple Inc.", ticker: "AAPL", exchange: "NASDAQ",
+  sector: "Technology", country: "United States", founded: 1976,
+  employees: 164000, emoji: "🍎",
+  description: "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide. Its flagship products include the iPhone, Mac, iPad, Apple Watch, and AirPods, supported by a growing ecosystem of services including the App Store, Apple Music, iCloud, and Apple TV+. Apple is consistently ranked among the world's most valuable and innovative companies.",
+  financials: {
+    market_cap: { value: 3150000000000, date: "May 2025" },
+    current_year: 2024, previous_year: 2023,
+    revenue:      { current: 391035000000, previous: 383285000000 },
+    total_assets: { current: 364980000000, previous: 352583000000 },
+    ebitda:       { current: 134660000000, previous: 130000000000 },
+    net_income:   { current: 93736000000,  previous: 96995000000  }
+  },
+  ceo: {
+    name: "Tim Cook", since: 2011,
+    bio: "Tim Cook joined Apple in 1998 as SVP of Worldwide Operations and became CEO in August 2011 following Steve Jobs's resignation. Under his leadership Apple became the first U.S. company to reach a $1 trillion, then $2 trillion, then $3 trillion market cap. Cook is known for his operational excellence, focus on privacy, and expansion of Apple's services business."
+  },
+  management: [
+    { name: "Luca Maestri",    title: "Chief Financial Officer" },
+    { name: "Craig Federighi", title: "SVP Software Engineering" },
+    { name: "Eddy Cue",        title: "SVP Services" },
+    { name: "Jeff Williams",   title: "Chief Operating Officer" }
+  ],
+  news: [
+    { headline: "Apple Intelligence expands to more countries with iOS 18.4 update", source: "The Verge", date: "April 2025", sentiment: "positive" },
+    { headline: "Apple reports record Services revenue of $26.6B in Q1 FY2025", source: "Bloomberg", date: "February 2025", sentiment: "positive" },
+    { headline: "iPhone shipments face headwinds in China amid local competition", source: "Reuters", date: "March 2025", sentiment: "negative" }
+  ],
+  geography: [
+    { country: "United States", flag: "🇺🇸", type: "HQ / Revenue", share: 43 },
+    { country: "Europe",        flag: "🇪🇺", type: "Revenue",      share: 25 },
+    { country: "China",         flag: "🇨🇳", type: "Revenue",      share: 17 },
+    { country: "Japan",         flag: "🇯🇵", type: "Revenue",      share: 7  },
+    { country: "Rest of Asia",  flag: "🌏", type: "Operations",    share: 8  }
+  ]
+};
+
+document.getElementById('demoBtn').addEventListener('click', () => {
+  currentData = DEMO_DATA;
+  renderResults(DEMO_DATA);
+  setState('results');
+});
 
 // ── Init ───────────────────────────────────────────────────
 if (!getKey()) {
