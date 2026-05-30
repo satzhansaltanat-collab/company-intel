@@ -666,8 +666,8 @@ Rules:
   };
   const tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
 
-  const callAPI = async (msgs, useTools) => {
-    const body = { model: 'claude-sonnet-4-6', max_tokens: 8000, messages: msgs };
+  const callAPI = async (msgs, useTools, maxTokens = 4000) => {
+    const body = { model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: msgs };
     if (useTools) body.tools = tools;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST', headers, body: JSON.stringify(body)
@@ -679,54 +679,28 @@ Rules:
     return res.json();
   };
 
-  // Step 1: search the web and gather facts as free text
-  const searchPrompt = `Search the web and find the most current and accurate information about "${query}" company:
-- Current CEO name and when they took the role
-- Latest annual financial results (revenue, net income, EBITDA, total assets)
-- Current market capitalization
-- Top 3-5 executives besides the CEO
-- 3 most recent significant news (last 6 months)
-- Main countries of operation
-
-Write a summary of everything you found. Be specific with names and numbers.`;
-
-  const searchMessages = [{ role: 'user', content: searchPrompt }];
+  // Step 1: search and gather key facts (short output)
+  const searchMessages = [{
+    role: 'user',
+    content: `Search the web for "${query}" company. Find and list ONLY: current CEO (name + year appointed), top 3 other executives, latest revenue + net income figures, current market cap, 3 recent news headlines. Be brief — bullet points only.`
+  }];
   let facts = '';
 
   for (let i = 0; i < 10; i++) {
-    const json = await callAPI(searchMessages, true);
+    const json = await callAPI(searchMessages, true, 600);
     const textBlock = json.content.find(b => b.type === 'text');
-
-    if (json.stop_reason === 'end_turn') {
-      facts = textBlock?.text || '';
-      break;
-    }
-
+    if (json.stop_reason === 'end_turn') { facts = textBlock?.text || ''; break; }
     searchMessages.push({ role: 'assistant', content: json.content });
-    const toolUseBlocks = json.content.filter(b => b.type === 'tool_use');
-    if (!toolUseBlocks.length) { facts = textBlock?.text || ''; break; }
-
-    const toolResults = toolUseBlocks.map(b => ({
-      type: 'tool_result', tool_use_id: b.id,
-      content: [{ type: 'text', text: 'Search executed, results incorporated.' }]
-    }));
-    searchMessages.push({ role: 'user', content: toolResults });
+    const toolUses = json.content.filter(b => b.type === 'tool_use');
+    if (!toolUses.length) { facts = textBlock?.text || ''; break; }
+    searchMessages.push({ role: 'user', content: toolUses.map(b => ({ type: 'tool_result', tool_use_id: b.id, content: [{ type: 'text', text: 'done' }] })) });
   }
 
-  // Step 2: convert gathered facts into strict JSON
-  const jsonPrompt = `Based on these researched facts about "${query}":
-
-${facts}
-
-Now output ONLY valid JSON with no explanation, no markdown, no code fences — just the raw JSON object:
-${prompt}`;
-
-  const jsonResp = await callAPI([{ role: 'user', content: jsonPrompt }], false);
+  // Step 2: build JSON using facts + training knowledge
+  const jsonResp = await callAPI([{ role: 'user', content: `${prompt}\n\nUse these verified facts from web search:\n${facts}` }], false, 3000);
   const rawText = jsonResp.content.find(b => b.type === 'text')?.text?.trim() || '';
-
-  // Try to extract JSON even if Claude added some text around it
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Could not parse company data. Try again.');
+  if (!jsonMatch) throw new Error('Could not parse data. Try again.');
   return JSON.parse(jsonMatch[0]);
 }
 
